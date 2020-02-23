@@ -1,20 +1,20 @@
 package cn.enilu.guns.admin.modular.system.controller;
 
-import cn.enilu.guns.admin.common.annotion.BussinessLog;
-import cn.enilu.guns.admin.common.annotion.Permission;
-import cn.enilu.guns.admin.common.constant.dictmap.DeptDict;
-import cn.enilu.guns.admin.common.exception.BizExceptionEnum;
 import cn.enilu.guns.admin.core.base.controller.BaseController;
-import cn.enilu.guns.admin.core.exception.GunsException;
-import cn.enilu.guns.admin.core.util.BeanUtil;
-import cn.enilu.guns.admin.modular.system.warpper.DeptWarpper;
-import cn.enilu.guns.bean.vo.node.ZTreeNode;
+import cn.enilu.guns.bean.annotion.core.BussinessLog;
+import cn.enilu.guns.bean.annotion.core.Permission;
+import cn.enilu.guns.bean.dictmap.DeptDict;
 import cn.enilu.guns.bean.entity.system.Dept;
-import cn.enilu.guns.dao.system.DeptRepository;
+import cn.enilu.guns.bean.enumeration.BizExceptionEnum;
+import cn.enilu.guns.bean.exception.GunsException;
+import cn.enilu.guns.bean.vo.node.ZTreeNode;
 import cn.enilu.guns.service.system.DeptService;
 import cn.enilu.guns.service.system.LogObjectHolder;
 import cn.enilu.guns.service.system.impl.ConstantFactory;
+import cn.enilu.guns.utils.BeanUtil;
 import cn.enilu.guns.utils.ToolUtil;
+import cn.enilu.guns.warpper.DeptWarpper;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -22,7 +22,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
-import javax.annotation.Resource;
 import java.util.List;
 
 /**
@@ -37,11 +36,8 @@ public class DeptController extends BaseController {
 
     private String PREFIX = "/system/dept/";
 
-    @Resource
+    @Autowired
     DeptService deptService;
-
-    @Resource
-    DeptRepository deptRepository;
 
 
     /**
@@ -65,8 +61,8 @@ public class DeptController extends BaseController {
      */
     @Permission
     @RequestMapping("/dept_update/{deptId}")
-    public String deptUpdate(@PathVariable Integer deptId, Model model) {
-        Dept dept = deptRepository.findOne(deptId);
+    public String deptUpdate(@PathVariable Long deptId, Model model) {
+        Dept dept = deptService.get(deptId);
         model.addAttribute(dept);
         model.addAttribute("pName", ConstantFactory.me().getDeptName(dept.getPid()));
         LogObjectHolder.me().set(dept);
@@ -96,8 +92,9 @@ public class DeptController extends BaseController {
             throw new GunsException(BizExceptionEnum.REQUEST_NULL);
         }
         //完善pids,根据pid拿到pid的pids
-        deptSetPids(dept);
-        return this.deptRepository.save(dept);
+        deptService.deptSetPids(dept);
+
+        return deptService.insert(dept);
     }
 
     /**
@@ -107,7 +104,7 @@ public class DeptController extends BaseController {
     @Permission
     @ResponseBody
     public Object list(String condition) {
-        List<Dept> list = this.deptService.list(condition);
+        List<Dept> list = this.deptService.query(condition);
         return super.warpObject(new DeptWarpper(BeanUtil.objectsToMaps(list)));
     }
 
@@ -117,8 +114,8 @@ public class DeptController extends BaseController {
     @RequestMapping(value = "/detail/{deptId}")
     @Permission
     @ResponseBody
-    public Object detail(@PathVariable("deptId") Integer deptId) {
-        return deptRepository.findOne(deptId);
+    public Object detail(@PathVariable("deptId") Long deptId) {
+        return deptService.get(deptId);
     }
 
     /**
@@ -132,8 +129,8 @@ public class DeptController extends BaseController {
         if (ToolUtil.isEmpty(dept) || dept.getId() == null) {
             throw new GunsException(BizExceptionEnum.REQUEST_NULL);
         }
-        deptSetPids(dept);
-        deptRepository.save(dept);
+        deptService.deptSetPids(dept);
+        deptService.update(dept);
         return SUCCESS_TIP;
     }
 
@@ -144,26 +141,11 @@ public class DeptController extends BaseController {
     @RequestMapping(value = "/delete")
     @Permission
     @ResponseBody
-    public Object delete(@RequestParam Integer deptId) {
-
+    public Object delete(@RequestParam Long deptId) {
         //缓存被删除的部门名称
         LogObjectHolder.me().set(ConstantFactory.me().getDeptName(deptId));
-
         deptService.deleteDept(deptId);
-
         return SUCCESS_TIP;
     }
 
-    private void deptSetPids(Dept dept) {
-        if (ToolUtil.isEmpty(dept.getPid()) || dept.getPid().equals(0)) {
-            dept.setPid(0);
-            dept.setPids("[0],");
-        } else {
-            int pid = dept.getPid();
-            Dept temp = deptRepository.findOne(pid);
-            String pids = temp.getPids();
-            dept.setPid(pid);
-            dept.setPids(pids + "[" + pid + "],");
-        }
-    }
 }

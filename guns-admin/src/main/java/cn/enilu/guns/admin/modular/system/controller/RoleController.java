@@ -1,22 +1,23 @@
 package cn.enilu.guns.admin.modular.system.controller;
 
-import cn.enilu.guns.admin.common.annotion.BussinessLog;
-import cn.enilu.guns.admin.common.annotion.Permission;
-import cn.enilu.guns.admin.common.constant.Const;
-import cn.enilu.guns.admin.common.constant.dictmap.RoleDict;
-import cn.enilu.guns.admin.common.exception.BizExceptionEnum;
+import cn.enilu.guns.admin.core.base.tips.ErrorTip;
+import cn.enilu.guns.bean.annotion.core.BussinessLog;
+import cn.enilu.guns.bean.annotion.core.Permission;
+import cn.enilu.guns.bean.constant.Const;
+import cn.enilu.guns.bean.dictmap.RoleDict;
+import cn.enilu.guns.bean.enumeration.BizExceptionEnum;
 import cn.enilu.guns.admin.core.base.controller.BaseController;
 import cn.enilu.guns.admin.core.base.tips.Tip;
 import cn.enilu.guns.admin.core.cache.CacheKit;
-import cn.enilu.guns.admin.core.exception.GunsException;
-import cn.enilu.guns.admin.core.util.BeanUtil;
-import cn.enilu.guns.admin.modular.system.warpper.RoleWarpper;
+import cn.enilu.guns.bean.exception.GunsException;
+import cn.enilu.guns.bean.vo.query.SearchFilter;
+import cn.enilu.guns.service.system.UserService;
+import cn.enilu.guns.utils.BeanUtil;
+import cn.enilu.guns.warpper.RoleWarpper;
 import cn.enilu.guns.bean.vo.node.ZTreeNode;
 import cn.enilu.guns.bean.constant.cache.Cache;
 import cn.enilu.guns.bean.entity.system.Role;
 import cn.enilu.guns.bean.entity.system.User;
-import cn.enilu.guns.dao.system.RoleRepository;
-import cn.enilu.guns.dao.system.UserRepository;
 import cn.enilu.guns.service.system.LogObjectHolder;
 import cn.enilu.guns.service.system.RoleService;
 import cn.enilu.guns.service.system.impl.ConstantFactory;
@@ -32,7 +33,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
-import javax.annotation.Resource;
 import javax.validation.Valid;
 import java.util.List;
 
@@ -48,14 +48,10 @@ public class RoleController extends BaseController {
 
     private static String PREFIX = "/system/role";
 
-    @Resource
-    UserRepository userRepository;
-
-    @Resource
-    RoleRepository roleRepository;
     @Autowired
     private RoleService roleService;
-
+    @Autowired
+    private UserService userService;
 
 
     /**
@@ -79,11 +75,11 @@ public class RoleController extends BaseController {
      */
     @Permission
     @RequestMapping(value = "/role_edit/{roleId}")
-    public String roleEdit(@PathVariable Integer roleId, Model model) {
+    public String roleEdit(@PathVariable Long roleId, Model model) {
         if (ToolUtil.isEmpty(roleId)) {
             throw new GunsException(BizExceptionEnum.REQUEST_NULL);
         }
-        Role role = this.roleRepository.findOne(roleId);
+        Role role = roleService.get(roleId);
         model.addAttribute(role);
         model.addAttribute("pName", ConstantFactory.me().getSingleRoleName(role.getPid()));
         model.addAttribute("deptName", ConstantFactory.me().getDeptName(role.getDeptid()));
@@ -96,7 +92,7 @@ public class RoleController extends BaseController {
      */
     @Permission
     @RequestMapping(value = "/role_assign/{roleId}")
-    public String roleAssign(@PathVariable("roleId") Integer roleId, Model model) {
+    public String roleAssign(@PathVariable("roleId") Long roleId, Model model) {
         if (ToolUtil.isEmpty(roleId)) {
             throw new GunsException(BizExceptionEnum.REQUEST_NULL);
         }
@@ -114,9 +110,9 @@ public class RoleController extends BaseController {
     public Object list(@RequestParam(required = false) String roleName) {
         List roles = null;
         if(Strings.isNullOrEmpty(roleName)) {
-            roles = (List) roleRepository.findAll();
+            roles = (List) roleService.queryAll();
         }else{
-            roles = roleRepository.findByName(roleName);
+            roles = roleService.findByName(roleName);
         }
         return super.warpObject(new RoleWarpper(BeanUtil.objectsToMaps(roles)));
     }
@@ -133,7 +129,7 @@ public class RoleController extends BaseController {
             throw new GunsException(BizExceptionEnum.REQUEST_NULL);
         }
         role.setId(null);
-        roleRepository.save(role);
+        roleService.insert(role);
         return SUCCESS_TIP;
     }
 
@@ -148,7 +144,7 @@ public class RoleController extends BaseController {
         if (result.hasErrors()) {
             throw new GunsException(BizExceptionEnum.REQUEST_NULL);
         }
-        this.roleRepository.save(role);
+        this.roleService.update(role);
 
         //删除缓存
         CacheKit.removeAll(Cache.CONSTANT);
@@ -162,14 +158,18 @@ public class RoleController extends BaseController {
     @BussinessLog(value = "删除角色", key = "roleId", dict = RoleDict.class)
     @Permission(Const.ADMIN_NAME)
     @ResponseBody
-    public Tip remove(@RequestParam Integer roleId) {
+    public Tip remove(@RequestParam Long roleId) {
         if (ToolUtil.isEmpty(roleId)) {
             throw new GunsException(BizExceptionEnum.REQUEST_NULL);
         }
 
         //不能删除超级管理员角色
-        if(roleId.equals(Const.ADMIN_ROLE_ID)){
+        if(roleId.intValue() ==Const.ADMIN_ROLE_ID){
             throw new GunsException(BizExceptionEnum.CANT_DELETE_ADMIN);
+        }
+        List<User> userList = userService.queryAll(SearchFilter.build("roleid", SearchFilter.Operator.EQ,String.valueOf(roleId)));
+        if(!userList.isEmpty()){
+            return new ErrorTip(400,"有用户使用该角色，禁止删除");
         }
 
         //缓存被删除的角色名称
@@ -187,11 +187,11 @@ public class RoleController extends BaseController {
      */
     @RequestMapping(value = "/view/{roleId}")
     @ResponseBody
-    public Tip view(@PathVariable Integer roleId) {
+    public Tip view(@PathVariable Long roleId) {
         if (ToolUtil.isEmpty(roleId)) {
             throw new GunsException(BizExceptionEnum.REQUEST_NULL);
         }
-        this.roleRepository.findOne(roleId);
+       roleService.get(roleId);
         return SUCCESS_TIP;
     }
 
@@ -202,7 +202,7 @@ public class RoleController extends BaseController {
     @BussinessLog(value = "配置权限", key = "roleId,ids", dict = RoleDict.class)
     @Permission(Const.ADMIN_NAME)
     @ResponseBody
-    public Tip setAuthority(@RequestParam("roleId") Integer roleId, @RequestParam("ids") String ids) {
+    public Tip setAuthority(@RequestParam("roleId") Long roleId, @RequestParam("ids") String ids) {
         if (ToolUtil.isOneEmpty(roleId)) {
             throw new GunsException(BizExceptionEnum.REQUEST_NULL);
         }
@@ -226,14 +226,14 @@ public class RoleController extends BaseController {
      */
     @RequestMapping(value = "/roleTreeListByUserId/{userId}")
     @ResponseBody
-    public List<ZTreeNode> roleTreeListByUserId(@PathVariable Integer userId) {
-        User theUser = this.userRepository.findOne(userId);
+    public List<ZTreeNode> roleTreeListByUserId(@PathVariable Long userId) {
+        User theUser = userService.get(userId);
         String roleid = theUser.getRoleid();
         if (ToolUtil.isEmpty(roleid)) {
             List<ZTreeNode> roleTreeList = roleService.roleTreeList();
             return roleTreeList;
         } else {
-            Integer[] roleIds = Convert.toIntArray(",", roleid);
+            Long[] roleIds = Convert.toLongArray(",", roleid);
             List<ZTreeNode> roleTreeListByUserId = this.roleService.roleTreeListByRoleId(roleIds);
             return roleTreeListByUserId;
         }

@@ -1,11 +1,11 @@
 package cn.enilu.guns.admin.core.base.controller;
 
-import cn.enilu.guns.admin.core.support.HttpKit;
+import cn.enilu.guns.utils.HttpKit;
 import cn.enilu.guns.admin.core.util.FileUtil;
 import cn.enilu.guns.admin.core.base.tips.SuccessTip;
-import cn.enilu.guns.admin.core.base.warpper.BaseControllerWarpper;
+import cn.enilu.guns.warpper.BaseControllerWarpper;
 import cn.enilu.guns.admin.core.page.PageInfoBT;
-import cn.enilu.guns.utils.factory.Page;
+import cn.enilu.guns.bean.vo.query.Page;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;

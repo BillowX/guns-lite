@@ -2,7 +2,7 @@
 
 <configuration scan="true" scanPeriod="10 seconds" debug="false">
 	<!-- 应用名称 -->
-	<contextName>edu-finance-admin</contextName>
+	<contextName>admin</contextName>
 
 	<!-- 向控制台输出日志 -->
 	<appender name="stdout" class="ch.qos.logback.core.ConsoleAppender">
@@ -17,7 +17,7 @@
 	<appender name="file" class="ch.qos.logback.core.rolling.RollingFileAppender">
 		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
 			<!--<fileNamePattern>/Users/deanyule/runtime/log/edu-finance-api%d{yyyy-MM-dd}.log</fileNamePattern>-->
-			<fileNamePattern>/data/guns-lite/runtime/log/admin%d{yyyy-MM-dd}.log</fileNamePattern>
+			<fileNamePattern>log/admin_%d{yyyy-MM-dd}.log</fileNamePattern>
 			<maxHistory>1000</maxHistory>
 		</rollingPolicy>
 		<encoder>
@@ -27,7 +27,7 @@
 	</appender>
 
 	<!-- druid连接池的日志级别 -->
-	<logger name="com.alibaba.druid" level="INFO" />
+	<logger name="com.alibaba.druid" level="DEBUG" />
 
 	<!-- snow_credit的日志级别 -->
 	<logger name="cn.enilu.guns" level="DEBUG" />

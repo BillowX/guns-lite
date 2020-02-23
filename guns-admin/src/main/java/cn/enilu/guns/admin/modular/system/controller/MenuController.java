@@ -1,24 +1,23 @@
 package cn.enilu.guns.admin.modular.system.controller;
 
-import cn.enilu.guns.admin.common.annotion.BussinessLog;
-import cn.enilu.guns.admin.common.annotion.Permission;
-import cn.enilu.guns.admin.common.constant.Const;
-import cn.enilu.guns.admin.common.constant.dictmap.MenuDict;
-import cn.enilu.guns.admin.common.exception.BizExceptionEnum;
 import cn.enilu.guns.admin.core.base.controller.BaseController;
 import cn.enilu.guns.admin.core.base.tips.Tip;
-import cn.enilu.guns.admin.core.exception.GunsException;
 import cn.enilu.guns.admin.core.support.BeanKit;
-import cn.enilu.guns.admin.core.util.BeanUtil;
-import cn.enilu.guns.admin.modular.system.warpper.MenuWarpper;
-import cn.enilu.guns.bean.vo.node.ZTreeNode;
+import cn.enilu.guns.bean.annotion.core.BussinessLog;
+import cn.enilu.guns.bean.annotion.core.Permission;
+import cn.enilu.guns.bean.constant.Const;
 import cn.enilu.guns.bean.constant.state.MenuStatus;
+import cn.enilu.guns.bean.dictmap.MenuDict;
 import cn.enilu.guns.bean.entity.system.Menu;
-import cn.enilu.guns.dao.system.MenuRepository;
+import cn.enilu.guns.bean.enumeration.BizExceptionEnum;
+import cn.enilu.guns.bean.exception.GunsException;
+import cn.enilu.guns.bean.vo.node.ZTreeNode;
 import cn.enilu.guns.service.system.LogObjectHolder;
 import cn.enilu.guns.service.system.MenuService;
 import cn.enilu.guns.service.system.impl.ConstantFactory;
+import cn.enilu.guns.utils.BeanUtil;
 import cn.enilu.guns.utils.ToolUtil;
+import cn.enilu.guns.warpper.MenuWarpper;
 import com.google.common.base.Strings;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -45,8 +44,6 @@ public class MenuController extends BaseController {
 
     private static String PREFIX = "/system/menu/";
 
-    @Autowired
-    MenuRepository menuRepository;
 
     @Autowired
     MenuService menuService;
@@ -76,19 +73,15 @@ public class MenuController extends BaseController {
         if (ToolUtil.isEmpty(menuId)) {
             throw new GunsException(BizExceptionEnum.REQUEST_NULL);
         }
-        Menu menu = this.menuRepository.findOne(menuId);
+        Menu menu = menuService.get(menuId);
 
         //获取父级菜单的id
-        Menu pMenu = this.menuRepository.findByCode(menu.getPcode());
+        Menu pMenu = menuService.findByCode(menu.getPcode());
 
         //如果父级是顶级菜单
         if (pMenu == null) {
             menu.setPcode("0");
-        } else {
-            //设置父级菜单的code为父级菜单的id
-            menu.setPcode(String.valueOf(pMenu.getId()));
         }
-
         Map<String, Object> menuMap = BeanKit.beanToMap(menu);
         menuMap.put("pcodeName", ConstantFactory.me().getMenuNameByCode(menu.getPcode()));
         model.addAttribute("menu", menuMap);
@@ -108,9 +101,10 @@ public class MenuController extends BaseController {
             throw new GunsException(BizExceptionEnum.REQUEST_NULL);
         }
         //设置父级菜单编号
-        menuSetPcode(menu);
+        menuService.menuSetPcode(menu);
+        menu.setStatus(MenuStatus.ENABLE.getCode());
 
-        this.menuRepository.save(menu);
+        menuService.update(menu);
         return SUCCESS_TIP;
     }
 
@@ -122,17 +116,17 @@ public class MenuController extends BaseController {
     @ResponseBody
     public Object list(@RequestParam(required = false) String menuName, @RequestParam(required = false) String level) {
         List<Menu> menus = null;
-        if(Strings.isNullOrEmpty(menuName)&&Strings.isNullOrEmpty(level)) {
-            menus = (List<Menu>) this.menuRepository.findAll();
+        if (Strings.isNullOrEmpty(menuName) && Strings.isNullOrEmpty(level)) {
+            menus = (List<Menu>) this.menuService.queryAll();
         }
-        if(!Strings.isNullOrEmpty(menuName)&&!Strings.isNullOrEmpty(level)) {
-            menus = this.menuRepository.findByNameLikeAndLevels("%"+menuName+"%", Integer.valueOf(level));
+        if (!Strings.isNullOrEmpty(menuName) && !Strings.isNullOrEmpty(level)) {
+            menus = this.menuService.findByNameLikeAndLevels("%" + menuName + "%", Integer.valueOf(level));
         }
-        if(!Strings.isNullOrEmpty(menuName)&&Strings.isNullOrEmpty(level)) {
-            menus = this.menuRepository.findByNameLike("%"+menuName+"%");
+        if (!Strings.isNullOrEmpty(menuName) && Strings.isNullOrEmpty(level)) {
+            menus = this.menuService.findByNameLike("%" + menuName + "%");
         }
-        if(Strings.isNullOrEmpty(menuName)&&!Strings.isNullOrEmpty(level)) {
-            menus = this.menuRepository.findByLevels(Integer.valueOf(level));
+        if (Strings.isNullOrEmpty(menuName) && !Strings.isNullOrEmpty(level)) {
+            menus = this.menuService.findByLevels(Integer.valueOf(level));
         }
 
         return super.warpObject(new MenuWarpper(BeanUtil.objectsToMaps(menus)));
@@ -157,10 +151,9 @@ public class MenuController extends BaseController {
         }
 
         //设置父级菜单编号
-        menuSetPcode(menu);
-
+        menuService.menuSetPcode(menu);
         menu.setStatus(MenuStatus.ENABLE.getCode());
-        this.menuRepository.save(menu);
+        menuService.insert(menu);
         return SUCCESS_TIP;
     }
 
@@ -192,7 +185,7 @@ public class MenuController extends BaseController {
         if (ToolUtil.isEmpty(menuId)) {
             throw new GunsException(BizExceptionEnum.REQUEST_NULL);
         }
-        this.menuRepository.findOne(menuId);
+        menuService.get(menuId);
         return SUCCESS_TIP;
     }
 
@@ -224,7 +217,7 @@ public class MenuController extends BaseController {
     @RequestMapping(value = "/menuTreeListByRoleId/{roleId}")
     @ResponseBody
     public List<ZTreeNode> menuTreeListByRoleId(@PathVariable Integer roleId) {
-        List<Long> menuIds = this.menuRepository.getMenuIdsByRoleId(roleId);
+        List<Long> menuIds = this.menuService.getMenuIdsByRoleId(roleId);
         if (ToolUtil.isEmpty(menuIds)) {
             List<ZTreeNode> roleTreeList = this.menuService.menuTreeList();
             return roleTreeList;
@@ -234,28 +227,5 @@ public class MenuController extends BaseController {
         }
     }
 
-    /**
-     * 根据请求的父级菜单编号设置pcode和层级
-     */
-    private void menuSetPcode(@Valid Menu menu) {
-        if (ToolUtil.isEmpty(menu.getPcode()) || menu.getPcode().equals("0")) {
-            menu.setPcode("0");
-            menu.setPcodes("[0],");
-            menu.setLevels(1);
-        } else {
-            int code = Integer.parseInt(menu.getPcode());
-            Menu pMenu = menuRepository.findOne(Long.valueOf(code));
-            Integer pLevels = pMenu.getLevels();
-            menu.setPcode(pMenu.getCode());
-
-            //如果编号和父编号一致会导致无限递归
-            if (menu.getCode().equals(menu.getPcode())) {
-                throw new GunsException(BizExceptionEnum.MENU_PCODE_COINCIDENCE);
-            }
-
-            menu.setLevels(pLevels + 1);
-            menu.setPcodes(pMenu.getPcodes() + "[" + pMenu.getCode() + "],");
-        }
-    }
 
 }

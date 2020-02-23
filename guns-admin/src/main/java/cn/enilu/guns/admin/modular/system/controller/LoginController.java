@@ -1,19 +1,18 @@
 package cn.enilu.guns.admin.modular.system.controller;
 
-import cn.enilu.guns.admin.common.exception.InvalidKaptchaException;
 import cn.enilu.guns.admin.core.base.controller.BaseController;
-import cn.enilu.guns.admin.core.log.LogManager;
-import cn.enilu.guns.admin.core.log.factory.LogTaskFactory;
-import cn.enilu.guns.admin.core.shiro.ShiroKit;
-import cn.enilu.guns.admin.core.support.HttpKit;
 import cn.enilu.guns.admin.core.util.ApiMenuFilter;
 import cn.enilu.guns.admin.core.util.KaptchaUtil;
-import cn.enilu.guns.bean.vo.node.MenuNode;
 import cn.enilu.guns.bean.core.ShiroUser;
 import cn.enilu.guns.bean.entity.system.User;
-import cn.enilu.guns.dao.system.MenuRepository;
-import cn.enilu.guns.dao.system.UserRepository;
+import cn.enilu.guns.bean.exception.InvalidKaptchaException;
+import cn.enilu.guns.bean.vo.node.MenuNode;
+import cn.enilu.guns.platform.log.LogManager;
+import cn.enilu.guns.platform.log.LogTaskFactory;
 import cn.enilu.guns.service.system.MenuService;
+import cn.enilu.guns.service.system.UserService;
+import cn.enilu.guns.shiro.ShiroKit;
+import cn.enilu.guns.utils.HttpKit;
 import cn.enilu.guns.utils.ToolUtil;
 import com.google.code.kaptcha.Constants;
 import org.apache.shiro.authc.UsernamePasswordToken;
@@ -37,12 +36,14 @@ import java.util.List;
 @Controller
 public class LoginController extends BaseController {
     Logger logger = LoggerFactory.getLogger(LoginController.class);
-    @Autowired
-    MenuRepository menuRepository;
+//    @Autowired
+//    MenuRepository menuRepository;
     @Autowired
     MenuService menuService;
+//    @Autowired
+//    UserRepository userRepository;
     @Autowired
-    UserRepository userRepository;
+    UserService userService;
 
 
     /**
@@ -51,7 +52,7 @@ public class LoginController extends BaseController {
     @RequestMapping(value = "/", method = RequestMethod.GET)
     public String index(Model model) {
         //获取菜单列表
-        List<Integer> roleList = ShiroKit.getUser().getRoleList();
+        List<Long> roleList = ShiroKit.getUser().getRoleList();
         if (roleList == null || roleList.size() == 0) {
             ShiroKit.getSubject().logout();
             model.addAttribute("tips", "该用户没有角色，无法登陆");
@@ -68,7 +69,7 @@ public class LoginController extends BaseController {
 
         //获取用户头像
         Long id = ShiroKit.getUser().getId();
-        User user = userRepository.findOne(id.intValue());
+        User user = userService.get(id);
         String avatar = user.getAvatar();
         model.addAttribute("avatar", avatar);
 

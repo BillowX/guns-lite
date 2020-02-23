@@ -1,6 +1,7 @@
 package cn.enilu.guns.admin;
 
 import cn.enilu.guns.admin.config.properties.GunsProperties;
+import cn.enilu.guns.dao.BaseRepositoryFactoryBean;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -9,6 +10,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.ComponentScan;
+import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurerAdapter;
@@ -23,7 +25,8 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurerAdapter
 @EnableCaching
 @ComponentScan(basePackages = "cn.enilu.guns")
 @EntityScan(basePackages="cn.enilu.guns.bean.entity")
-@EnableJpaRepositories(basePackages= "cn.enilu.guns.dao")
+@EnableJpaRepositories(basePackages= "cn.enilu.guns.dao", repositoryFactoryBeanClass = BaseRepositoryFactoryBean.class)
+@EnableJpaAuditing
 public class AdminApplication extends WebMvcConfigurerAdapter {
 
     protected final static Logger logger = LoggerFactory.getLogger(AdminApplication.class);

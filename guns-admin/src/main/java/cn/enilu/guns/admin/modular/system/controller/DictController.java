@@ -1,20 +1,20 @@
 package cn.enilu.guns.admin.modular.system.controller;
 
-import cn.enilu.guns.admin.common.annotion.BussinessLog;
-import cn.enilu.guns.admin.common.annotion.Permission;
-import cn.enilu.guns.admin.common.constant.Const;
-import cn.enilu.guns.admin.common.constant.dictmap.DictMap;
-import cn.enilu.guns.admin.common.exception.BizExceptionEnum;
 import cn.enilu.guns.admin.core.base.controller.BaseController;
-import cn.enilu.guns.admin.core.exception.GunsException;
-import cn.enilu.guns.admin.core.util.BeanUtil;
-import cn.enilu.guns.admin.modular.system.warpper.DictWarpper;
+import cn.enilu.guns.bean.annotion.core.BussinessLog;
+import cn.enilu.guns.bean.annotion.core.Permission;
+import cn.enilu.guns.bean.constant.Const;
+import cn.enilu.guns.bean.dictmap.DictMap;
 import cn.enilu.guns.bean.entity.system.Dict;
-import cn.enilu.guns.dao.system.DictRepository;
+import cn.enilu.guns.bean.enumeration.BizExceptionEnum;
+import cn.enilu.guns.bean.exception.GunsException;
 import cn.enilu.guns.service.system.DictService;
 import cn.enilu.guns.service.system.LogObjectHolder;
 import cn.enilu.guns.service.system.impl.ConstantFactory;
+import cn.enilu.guns.utils.BeanUtil;
 import cn.enilu.guns.utils.ToolUtil;
+import cn.enilu.guns.warpper.DictWarpper;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -22,7 +22,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
-import javax.annotation.Resource;
 import java.util.List;
 
 /**
@@ -37,11 +36,7 @@ public class DictController extends BaseController {
 
     private String PREFIX = "/system/dict/";
 
-
-    @Resource
-    DictRepository dictRepository;
-
-    @Resource
+    @Autowired
     DictService dictService;
 
     /**
@@ -65,10 +60,10 @@ public class DictController extends BaseController {
      */
     @Permission(Const.ADMIN_NAME)
     @RequestMapping("/dict_edit/{dictId}")
-    public String deptUpdate(@PathVariable Integer dictId, Model model) {
-        Dict dict = dictRepository.findOne(dictId);
+    public String deptUpdate(@PathVariable Long dictId, Model model) {
+        Dict dict = dictService.get(dictId);
         model.addAttribute("dict", dict);
-        List<Dict> subDicts = dictRepository.findByPid(dictId.intValue());
+        List<Dict> subDicts = dictService.queryByPid(dictId);
         model.addAttribute("subDicts", subDicts);
         LogObjectHolder.me().set(dict);
         return PREFIX + "dict_edit.html";
@@ -98,7 +93,7 @@ public class DictController extends BaseController {
     @Permission(Const.ADMIN_NAME)
     @ResponseBody
     public Object list(String condition) {
-        List<Dict> list = dictRepository.findByPid(0);
+        List<Dict> list = dictService.queryByPid(0L);
         return super.warpObject(new DictWarpper(BeanUtil.objectsToMaps(list)));
     }
 
@@ -108,8 +103,8 @@ public class DictController extends BaseController {
     @RequestMapping(value = "/detail/{dictId}")
     @Permission(Const.ADMIN_NAME)
     @ResponseBody
-    public Object detail(@PathVariable("dictId") Integer dictId) {
-        return dictRepository.findOne(dictId);
+    public Object detail(@PathVariable("dictId") Long dictId) {
+        return dictService.get(dictId);
     }
 
     /**
@@ -119,7 +114,7 @@ public class DictController extends BaseController {
     @RequestMapping(value = "/update")
     @Permission(Const.ADMIN_NAME)
     @ResponseBody
-    public Object update(Integer dictId, String dictName, String dictValues) {
+    public Object update(Long dictId, String dictName, String dictValues) {
         if (ToolUtil.isOneEmpty(dictId, dictName, dictValues)) {
             throw new GunsException(BizExceptionEnum.REQUEST_NULL);
         }
@@ -134,7 +129,7 @@ public class DictController extends BaseController {
     @RequestMapping(value = "/delete")
     @Permission(Const.ADMIN_NAME)
     @ResponseBody
-    public Object delete(@RequestParam Integer dictId) {
+    public Object delete(@RequestParam Long dictId) {
 
         //缓存被删除的名称
         LogObjectHolder.me().set(ConstantFactory.me().getDictName(dictId));
